@@ -78,10 +78,11 @@ def listen():
         engine.say(ia_name+": No te entendí")
     except Exception:
         print("((Esperando))")
-        return ""
+        return
     return rec
 
 
+print("(("+ia_name+" está escuchando))")
 while True:
     text = listen()
     if ia_name in text:
@@ -91,10 +92,9 @@ while True:
             response_str = gpt3(text)
             talk(response_str)
             text = listen()
-            if ("adiós") or ("Adios") or ("Adiós") or ("adios") in text:
+            if ("adiós" or "Adios" or "Adiós" or "adios") in text:
                 response_str = gpt3(text)
                 talk(response_str)
                 print("(("+ia_name+" se fue a dormir))")
                 isListening = False
                 break
-    continue
