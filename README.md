@@ -1,6 +1,8 @@
-# Chatbot-Python
+# Chatbot-Python es-ES
 
 Chatbot using GPT-3
+
+lang = es-ES
 
 *#create a virtual enviroment and activate (venv)*
 
@@ -16,4 +18,4 @@ python -m venv env
 pip install -r .\requirements.txt
 ```
 
-*#start `chatbot.py `and enjoy!*
+*#start `chatbot.py` and enjoy!*
