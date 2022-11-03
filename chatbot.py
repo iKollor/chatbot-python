@@ -1,9 +1,10 @@
 import openai
 import pyttsx3
 import speech_recognition as sr
+import keys
 
 # api-key
-openai.api_key = "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"
+openai.api_key = keys.api_key
 
 # setMic
 # for index, name in enumerate(sr.Microphone.list_microphone_names()):
@@ -11,10 +12,17 @@ openai.api_key = "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"
 mic = sr.Microphone(device_index=1)
 
 # input
-user_name = input("Escribe tu nombre: ")
-ia_name = input("Escribe el nombre de la IA: ")
-context = ia_name + " es una asistente virtual muy sarcástica y bromista aun asi servicial a "+user_name
+user_name_raw = input("Escribe tu nombre: ")
+user_name = user_name_raw.capitalize()
+ia_name_raw = input("Escribe el nombre de la IA: ")
+ia_name = ia_name_raw.capitalize()
+ia_language_raw = input("Escribe el idioma de la IA: ")
+ia_language = ia_language_raw.lower()
+
+#initialize context
+context = ia_name + " es una asistente virtual que solo habla "+ ia_language +". "+ia_name+" es muy sarcástica, bromista y servicial a "+user_name+"."
 #input("Describe a tu IA: ")
+print(context)
 
 # start
 engine = pyttsx3.init()
@@ -47,6 +55,7 @@ def gpt3(text, conversation):
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0.6,
+        stop=[user_name+":"]
     )
     response_str = response["choices"][0]["text"].replace(ia_name+":", "").strip()
     conversation += response_str
