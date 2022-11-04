@@ -7,10 +7,15 @@ import os
 #from playsound import playsound
 from pydub import AudioSegment
 from pydub.playback import play
+import re
 
 from google.cloud import texttospeech
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gKey.json"
 client = texttospeech.TextToSpeechClient()
+
+def openfile(filepath):
+    with open(filepath, "r", encoding="utf-8") as infile:
+        return infile.read()
 
 # api-key
 openai.api_key = keys.api_key
@@ -28,47 +33,39 @@ ia_name = ia_name_raw.capitalize()
 ia_language_raw = input("Escribe el idioma de la IA: ")
 ia_language = ia_language_raw.lower()
 
-#initialize context
-context = ia_name + " es una asistente virtual que solo habla "+ ia_language +". "+ia_name+" es muy sarcástica, bromista y servicial a "+user_name+"."
-#input("Describe a tu IA: ")
-print(context)
-
 # start
 engine = pyttsx3.init()
 listener = sr.Recognizer()
-text = ""
-conversation = ""
+user_input = ""
 goodbyes = ["adiós", "adios", "chao", "bye"]
 
 isListening = False
 
-# sr properties
-listener.energy_threshold = 100
-listener.dynamic_energy_threshold = False
-# sr voice properties
+# speech recognition properties (for listen()) #####Theses are the settings for MY microphone Shure sv200 ######
+listener.energy_threshold = 100 # default: 3000
+listener.dynamic_energy_threshold = True # default: True
+
+#pyttsx3 voice properties
 #voices = engine.getProperty("voices")
 #engine.setProperty('voice', voices[2].id)
 # for voice in voices:
 #    print (voice, voice.id)
 
 
-def gpt3(text, conversation):
+def gpt3(prompt):
     # using GPT3
-    prompt = user_name + ": " + text + "\n"+ia_name+": "
-    print(user_name+": "+text)
-    conversation += prompt
+    prompt = prompt.encode(encoding="UTF-8", errors="ignore").decode()
     response = openai.Completion.create(
         engine="text-davinci-002",
-        prompt=(context+"\n\n"+conversation),
-        temperature=0.9, 
-        max_tokens=150,
+        prompt=prompt,
+        temperature=0.7, 
+        max_tokens=400,
         top_p=1,
         frequency_penalty=0,
-        presence_penalty=0.6,
-        stop=[user_name+":"]
+        presence_penalty=0,
+        stop=[user_name+":", ia_name+":"]
     )
-    response_str = response["choices"][0]["text"].replace(ia_name+":", "").strip()
-    conversation += response_str
+    response_str = response["choices"][0]["text"].strip()
     return response_str
 
 
@@ -94,6 +91,9 @@ def gpt3(text, conversation):
         talk("¿Puedes repetirme por favor?")
 
 
+#initialize context
+context = openfile("prompt_chat.txt")  # open prompt file
+
 def talk(text): # using google cloud tts
     synthesis_input = texttospeech.SynthesisInput(text=text)
     voice = texttospeech.VoiceSelectionParams(
@@ -111,8 +111,8 @@ def talk(text): # using google cloud tts
     
     audio = AudioSegment.from_wav("voice.wav")
 
-    play(audio)
     print(ia_name+": "+text)
+    play(audio)
     os.remove("voice.wav")
 
 
@@ -134,31 +134,48 @@ def listen():
         rec = listener.recognize_google(voice, language="es-ES")
     except:
         rec = "*"+user_name+" dice algo inentendible*"
-    return rec
+
+    rec_capitalize = rec.capitalize()
+    
+    return rec_capitalize
 
 
 print("((Di algo))")
+conversation = list()
+
 
 while True:
-    text = listen()
-    if ia_name in text:
+    user_input = listen().capitalize() #user input
+    if ia_name.lower() in user_input.lower():
         isListening = True
         while True:
-            lower_text = text.lower()
+            print(user_name+": "+user_input)
+            conversation.append(user_name+": %s" % user_input) #add user input to conversation
+            text_block = "\n".join(conversation) #make list into text block for GPT3
+            words_to_replace = {"<<USER_NAME>>": user_name, "<<IA_NAME>>": ia_name, "<<IA_LANGUAGE>>": ia_language, "<<BLOCK>>":text_block}
+            prompt = openfile("prompt_chat.txt")
+            for key, value in words_to_replace.items():
+                prompt = prompt.replace(key, value)
+            prompt = prompt + "\n"+ia_name+": "
+
+            lower_text = user_input.lower()
             split_text = lower_text.split()
 
             if any(goodbye in split_text for goodbye in goodbyes):
                 isListening = False
                 break
+            
+            response_str = gpt3(prompt)#get response from GPT3
 
-            response_str = gpt3(text, conversation)
             if response_str == "":
                 print(ia_name+": ¿Puedes repetirme por favor?")
                 talk("¿Puedes repetirme por favor?")
-            talk(response_str)   
-            text = listen()
+            
+            talk(response_str)
+            conversation.append(ia_name+": %s" % response_str)
+            user_input = listen().capitalize()
 
-        response_str = gpt3(text, conversation)
+        response_str = gpt3(prompt)
         talk(response_str)
         print("(("+ia_name+" se fue a dormir))")
         isListening = False
