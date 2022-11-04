@@ -2,6 +2,15 @@ import openai
 import pyttsx3
 import speech_recognition as sr
 import keys
+from gtts import gTTS
+import os
+#from playsound import playsound
+from pydub import AudioSegment
+from pydub.playback import play
+
+from google.cloud import texttospeech
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gKey.json"
+client = texttospeech.TextToSpeechClient()
 
 # api-key
 openai.api_key = keys.api_key
@@ -29,6 +38,7 @@ engine = pyttsx3.init()
 listener = sr.Recognizer()
 text = ""
 conversation = ""
+goodbyes = ["adiós", "adios", "chao", "bye"]
 
 isListening = False
 
@@ -36,8 +46,8 @@ isListening = False
 listener.energy_threshold = 100
 listener.dynamic_energy_threshold = False
 # sr voice properties
-voices = engine.getProperty("voices")
-engine.setProperty('voice', voices[2].id)
+#voices = engine.getProperty("voices")
+#engine.setProperty('voice', voices[2].id)
 # for voice in voices:
 #    print (voice, voice.id)
 
@@ -59,17 +69,57 @@ def gpt3(text, conversation):
     )
     response_str = response["choices"][0]["text"].replace(ia_name+":", "").strip()
     conversation += response_str
-    print(ia_name+": "+response_str)
     return response_str
 
 
-def talk(text):
+#def talk(text): # using pyttsx3
     engine.say(text)
     engine.runAndWait()
 
 
-def listen():
+#def talk(text): # using gTTS
+    try:
+        tts = gTTS(text=text, lang="es", tld="com.mx" )
+        tts.save("voice.mp3")
 
+        audio = AudioSegment.from_mp3("voice.mp3")
+        new_file = speedup(audio,1.2,200,10)
+        new_file.export("voice_faster.mp3", format="mp3")
+
+        playsound("voice_faster.mp3")
+        os.remove("voice.mp3")
+        os.remove("voice_faster.mp3")
+    except AssertionError:
+        print(ia_name+": ¿Puedes repetirme por favor?")
+        talk("¿Puedes repetirme por favor?")
+
+
+def talk(text): # using google cloud tts
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="es-ES", name="es-ES-Wavenet-D", ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
+    )
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.LINEAR16, effects_profile_id=["headphone-class-device"]
+    )
+    response = client.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=audio_config
+    )
+
+    with open("voice.wav", "wb") as out:
+        out.write(response.audio_content)
+    
+    audio = AudioSegment.from_wav("voice.wav")
+
+    play(audio)
+    print(ia_name+": "+text)
+    os.remove("voice.wav")
+
+
+talk("Hola "+user_name+", gracias por terminar la configuración!. Para hablar conmigo di mi nombre. ")
+
+
+def listen():
     if isListening == True:
         print("(("+ia_name+" está escuchando))")
     else:
@@ -93,15 +143,19 @@ while True:
     text = listen()
     if ia_name in text:
         isListening = True
-        while ("adiós" or "adios") not in text.lower():
+        while True:
+            lower_text = text.lower()
+            split_text = lower_text.split()
+
+            if any(goodbye in split_text for goodbye in goodbyes):
+                isListening = False
+                break
 
             response_str = gpt3(text, conversation)
-
-            if response_str == " ":
+            if response_str == "":
                 print(ia_name+": ¿Puedes repetirme por favor?")
                 talk("¿Puedes repetirme por favor?")
-            
-            talk(response_str)
+            talk(response_str)   
             text = listen()
 
         response_str = gpt3(text, conversation)

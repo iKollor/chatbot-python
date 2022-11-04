@@ -152,10 +152,15 @@ cython_debug/
 
 #apikey
 keys.py
+gKey.json
 
 # Enviorment
 envs/
 env/
+
+#voice
+voice.mp3
+voice.mp3
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
