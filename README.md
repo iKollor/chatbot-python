@@ -1,6 +1,6 @@
 # Chatbot-Python es-ES
 
-Chatbot using GPT-3
+Chatbot using GPT-3, Speech Recognition and Google Cloud TTS
 
 lang = es-ES
 
@@ -17,5 +17,9 @@ python -m venv env
 ```
 pip install -r .\requirements.txt
 ```
+
+*#install ffmpeg from:*
+
+[FFmpeg](https://ffmpeg.org/) (needed to listen to CloudTTS)
 
 *#start `chatbot.py` and enjoy!*
