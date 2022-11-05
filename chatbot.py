@@ -58,11 +58,11 @@ def gpt3(prompt):
     response = openai.Completion.create(
         engine="text-davinci-002",
         prompt=prompt,
-        temperature=0.7, 
+        temperature=1, 
         max_tokens=400,
         top_p=1,
         frequency_penalty=0,
-        presence_penalty=0,
+        presence_penalty=0.6,
         stop=[user_name+":", ia_name+":"]
     )
     response_str = response["choices"][0]["text"].strip()
